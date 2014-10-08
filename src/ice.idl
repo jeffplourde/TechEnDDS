@@ -1,0 +1,19 @@
+module ice {
+  typedef string<64> UniqueDeviceIdentifier;
+  typedef string<128> LongString;
+
+  struct InfusionObjective {
+    UniqueDeviceIdentifier unique_device_identifier; //@key
+    LongString requestor;
+    boolean stopInfusion;
+  };
+  const string InfusionObjectiveTopic = "InfusionObjective";
+
+  struct ClampStatus {
+  	UniqueDeviceIdentifier unique_device_identifier; //@key
+  	boolean ready, door, tube, clamp;
+  	float batteryStatus;
+  	float loadCell;
+  };
+  const string ClampStatusTopic = "ClampStatus";
+};
