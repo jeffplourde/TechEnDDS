@@ -1,13 +1,16 @@
 DDS Example for TechEn
 ==============
 
-Join the RTI Infrastructure Community ICE_IC01
+ICE_IC01
 ------------------
+Join the RTI Infrastructure Community ICE_IC01 to download RTI libraries for DDS.
+
 [http://www.rti.com/downloads/rti-dds.html](http://www.rti.com/downloads/rti-dds.html)
 
 
-Ensure that NDDSHOME refers to the location of the RTI DDS target package
+NDDSHOME
 -------------
+Ensure that the NDDSHOME environment variable refers to the location of the RTI DDS target package
 ```
   export NDDSHOME=/path/to/ndds
 ```
@@ -30,4 +33,4 @@ And to run the controller side of the communication
     objs/ARCH/main controller
 ```
 
-Ensure you run from the root of the project containing USER_QOS_PROFILES.xml.  RTI DDS will automatically use these default profiles found in the working directory.
+Make sure you run from the root of the project containing USER_QOS_PROFILES.xml.  RTI DDS will automatically use these default profiles found in the working directory.
