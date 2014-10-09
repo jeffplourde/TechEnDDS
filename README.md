@@ -15,8 +15,9 @@ Ensure that the NDDSHOME environment variable refers to the location of the RTI 
   export NDDSHOME=/path/to/ndds
 ```
 
-To build the example
+Build
 ------------------
+To build the example
 ```
   make -f make/Makefile.ARCH
 ```
