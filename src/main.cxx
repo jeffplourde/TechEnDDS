@@ -260,7 +260,7 @@ void controller() {
  * command line argument
  */
 int main(int argc, char ** argv) {
-	if(argc < 1) {
+	if(argc < 2) {
 		fprintf(stderr, "Specify clamp or controller\n");
 		return -1;
 	} else {
