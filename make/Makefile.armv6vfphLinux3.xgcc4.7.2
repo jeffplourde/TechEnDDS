@@ -22,9 +22,9 @@
 ARCH=armv6vfphLinux3.xgcc4.7.2
 
 CXX = arm-linux-gnueabihf-g++
-CXXFLAGS = -fpic -DRTI_UNIX -DRTI_LINUX -march=armv6 -mfpu=vfp -mfloat-abi=hard -mlong-calls
+CXXFLAGS = -fpic -DRTI_UNIX -DRTI_LINUX -march=armv6 -mfpu=vfp -mfloat-abi=hard -mlong-calls -marm
 CXXLD = arm-linux-gnueabihf-g++
-CXXLDFLAGS = -march=armv6 -mfpu=vfp -mfloat-abi=hard -mlong-calls
+CXXLDFLAGS = -march=armv6 -mfpu=vfp -mfloat-abi=hard -mlong-calls -marm
 SYSLIBS = -ldl -lnsl -lm -lpthread -lrt
 
 # The rest of the rules are in the 'Makefile.common'
