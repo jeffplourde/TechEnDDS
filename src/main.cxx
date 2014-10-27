@@ -18,11 +18,87 @@ To access DDS libraries join our infrastructure community ICE_IC01 at
 http://www.rti.com/downloads/rti-dds.html
 */
 
+class MyInfusionObjectiveDataReaderListener : public DDSDataReaderListener {
+public:
+  void on_requested_deadline_missed(DDSDataReader *reader, const DDS_RequestedDeadlineMissedStatus &status) {}
+  void on_liveliness_changed(DDSDataReader *reader, const DDS_LivelinessChangedStatus &status) {}
+  void on_requested_incompatible_qos(DDSDataReader *reader, const DDS_RequestedIncompatibleQosStatus &status) {}
+  void on_sample_rejected(DDSDataReader *reader, const DDS_SampleRejectedStatus &status) {}
+  void on_data_available(DDSDataReader *reader_) {
+  	ice::InfusionObjectiveDataReader *reader = ice::InfusionObjectiveDataReader::narrow(reader_);
+  	/**
+  	 * Examines the reader for any new (NOT_READ) samples from ALIVE instances.  If the return code
+  	 * is DDS_RETCODE_OK then samples were placed into the specified sequence objects.
+  	 *
+  	 * See http://community.rti.com/rti-doc/510/ndds.5.1.0/doc/html/api_cpp/structFooDataReader.html
+  	 */
+ 	if(DDS_RETCODE_OK == reader->read(infusionObjectiveSeq, sampleInfoSeq, DDS_LENGTH_UNLIMITED, DDS_NOT_READ_SAMPLE_STATE, DDS_ANY_VIEW_STATE, DDS_ALIVE_INSTANCE_STATE)) {
+		/**
+		 * Iterate through the contents of the sequence
+		 */ 		
+ 		for(int i = 0; i < infusionObjectiveSeq.length(); ++i) {
+ 			/**
+ 			 * print_data is a generated convenience method for dumping sample contents to stdout
+ 			 *
+ 			 * See http://community.rti.com/rti-doc/510/ndds.5.1.0/doc/html/api_cpp/structFooTypeSupport.html#a1f2301d640990cccdcabd38a3dbd80de
+ 			 */
+ 			ice::InfusionObjectiveTypeSupport::print_data(&infusionObjectiveSeq[i]);
+ 		}
+ 		/**
+ 		 * Returns borrowed sample instances to the reader.
+ 		 *
+ 		 * See http://community.rti.com/rti-doc/510/ndds.5.1.0/doc/html/api_cpp/structFooDataReader.html#a9f142a4ee87d08e14a4c07325e1b13ea
+ 		 */
+ 		reader->return_loan(infusionObjectiveSeq, sampleInfoSeq);
+ 	}
+  }
+  void on_sample_lost(DDSDataReader *reader, DDS_SampleLostStatus &status) {}
+  void on_subscription_matched(DDSDataReader *reader, const DDS_SubscriptionMatchedStatus &status) {}
+private:
+	  /** 
+   * These sequence structures will receive samples read out of the data reader.  The first will
+   * contain the data samples, the second contains metadata about those samples (known as DDS_SampleInfo)
+   * 
+   * See http://community.rti.com/rti-doc/510/ndds.5.1.0/doc/html/api_cpp/structFooSeq.html
+   * See http://community.rti.com/rti-doc/510/ndds.5.1.0/doc/html/api_cpp/structDDS__SampleInfoSeq.html
+   */
+  ice::InfusionObjectiveSeq infusionObjectiveSeq;
+  DDS_SampleInfoSeq sampleInfoSeq;
+};
+
+class MyClampStatusDataReaderListener : public DDSDataReaderListener {
+public:
+  void on_requested_deadline_missed(DDSDataReader *reader, const DDS_RequestedDeadlineMissedStatus &status) {}
+  void on_liveliness_changed(DDSDataReader *reader, const DDS_LivelinessChangedStatus &status) {}
+  void on_requested_incompatible_qos(DDSDataReader *reader, const DDS_RequestedIncompatibleQosStatus &status) {}
+  void on_sample_rejected(DDSDataReader *reader, const DDS_SampleRejectedStatus &status) {}
+  void on_data_available(DDSDataReader *reader_) {
+  	ice::ClampStatusDataReader *reader = ice::ClampStatusDataReader::narrow(reader_);
+ 	if(DDS_RETCODE_OK == reader->read(clampStatusSeq, sampleInfoSeq, DDS_LENGTH_UNLIMITED, DDS_NOT_READ_SAMPLE_STATE, DDS_ANY_VIEW_STATE, DDS_ALIVE_INSTANCE_STATE)) {
+ 		for(int i = 0; i < clampStatusSeq.length(); ++i) {
+ 			ice::ClampStatusTypeSupport::print_data(&clampStatusSeq[i]);
+ 		}
+ 		reader->return_loan(clampStatusSeq, sampleInfoSeq);
+ 	}
+  }
+  void on_sample_lost(DDSDataReader *reader, DDS_SampleLostStatus &status) {}
+  void on_subscription_matched(DDSDataReader *reader, const DDS_SubscriptionMatchedStatus &status) {}
+private:
+  ice::ClampStatusSeq clampStatusSeq;
+  DDS_SampleInfoSeq sampleInfoSeq;
+};
+
 /**
  * Example function playing the role of the clamp.  Subscribing to the InfusionObjective topic
  * to receive commands and publishing clamp status to the ClampStatus topic.
  */ 
 void clamp() {
+  /**
+   * A listener object to receive status events; specifically the DATA_AVAILABLE status
+   * whereupon samples will be read.
+   */
+  MyInfusionObjectiveDataReaderListener infusionObjectiveDataReaderListener;
+
   /**
    * Access the DomainParticipantFactory singleton to construct DDS entities.
    * 
@@ -99,10 +175,15 @@ void clamp() {
    *
    * The previously created topic is specified for this reader along with default QoS policies and no listener is registered to receive
    * entity status changes.
+   * 
+   * Also a listener object is created to handle callbacks on status change events.  Which events trigger a callbacks is controlled by
+   * the specified status mask.  In this case when the DATA_AVAILABLE flag on the reader is set the callback for on_data_available will
+   * be called.
    *
    * See http://community.rti.com/rti-doc/510/ndds.5.1.0/doc/html/api_cpp/classDDSDomainParticipant.html#ac0e5f00a45b4f39a96441a19d9d88a0d
    */
-  ice::InfusionObjectiveDataReader *reader = dynamic_cast<ice::InfusionObjectiveDataReader*>(participant->create_datareader(filteredInfusionObjectiveTopic, DDS_DATAREADER_QOS_DEFAULT, NULL, DDS_STATUS_MASK_NONE));
+  ice::InfusionObjectiveDataReader *reader = dynamic_cast<ice::InfusionObjectiveDataReader*>(participant->create_datareader(filteredInfusionObjectiveTopic, DDS_DATAREADER_QOS_DEFAULT, 
+  	&infusionObjectiveDataReaderListener, DDS_DATA_AVAILABLE_STATUS));
 
 
   /**
@@ -125,17 +206,6 @@ void clamp() {
    */
   DDS_InstanceHandle_t handle = writer->register_instance(clampStatus);
 
-  /** 
-   * These sequence structures will receive samples read out of the data reader.  The first will
-   * contain the data samples, the second contains metadata about those samples (known as DDS_SampleInfo)
-   * 
-   * See http://community.rti.com/rti-doc/510/ndds.5.1.0/doc/html/api_cpp/structFooSeq.html
-   * See http://community.rti.com/rti-doc/510/ndds.5.1.0/doc/html/api_cpp/structDDS__SampleInfoSeq.html
-   */
-  ice::InfusionObjectiveSeq infusionObjectiveSeq;
-  DDS_SampleInfoSeq sampleInfoSeq;
-
-
   /**
    * Right now this example will perpetually write to ClampStatus and read from InfusionObjective.
    * Probably a check of stdin or a SIGINT handler should break out of it gracefully.
@@ -147,33 +217,6 @@ void clamp() {
   	 * See http://community.rti.com/rti-doc/510/ndds.5.1.0/doc/html/api_cpp/structFooDataWriter.html#abb3770f202340bc819368463987eb055
   	 */
   	writer->write(clampStatus, handle);
-
-  	/**
-  	 * Examines the reader for any new (NOT_READ) samples from ALIVE instances.  If the return code
-  	 * is DDS_RETCODE_OK then samples were placed into the specified sequence objects.
-  	 *
-  	 * See http://community.rti.com/rti-doc/510/ndds.5.1.0/doc/html/api_cpp/structFooDataReader.html
-  	 */
- 	if(DDS_RETCODE_OK == reader->read(infusionObjectiveSeq, sampleInfoSeq, DDS_LENGTH_UNLIMITED, DDS_NOT_READ_SAMPLE_STATE, DDS_ANY_VIEW_STATE, DDS_ALIVE_INSTANCE_STATE)) {
-		/**
-		 * Iterate through the contents of the sequence
-		 */ 		
- 		for(int i = 0; i < infusionObjectiveSeq.length(); ++i) {
- 			/**
- 			 * print_data is a generated convenience method for dumping sample contents to stdout
- 			 *
- 			 * See http://community.rti.com/rti-doc/510/ndds.5.1.0/doc/html/api_cpp/structFooTypeSupport.html#a1f2301d640990cccdcabd38a3dbd80de
- 			 */
- 			ice::InfusionObjectiveTypeSupport::print_data(&infusionObjectiveSeq[i]);
- 		}
- 		/**
- 		 * Returns borrowed sample instances to the reader.
- 		 *
- 		 * See http://community.rti.com/rti-doc/510/ndds.5.1.0/doc/html/api_cpp/structFooDataReader.html#a9f142a4ee87d08e14a4c07325e1b13ea
- 		 */
- 		reader->return_loan(infusionObjectiveSeq, sampleInfoSeq);
- 	}
-
 
   	sleep(1);
   }  
@@ -196,6 +239,7 @@ void clamp() {
 };
 
 void controller() {
+  MyClampStatusDataReaderListener clampStatusDataReaderListener;
   DDSDomainParticipantFactory *factory = DDSTheParticipantFactory->get_instance();
   DDSDomainParticipant *participant = factory->create_participant(15, DDS_PARTICIPANT_QOS_DEFAULT, NULL, DDS_STATUS_MASK_NONE);
   ice::InfusionObjectiveTypeSupport::register_type(participant, ice::InfusionObjectiveTYPENAME);
@@ -209,7 +253,8 @@ void controller() {
   params[0] = "'MYUDI'";
   DDSContentFilteredTopic *filteredClampStatusTopic = participant->create_contentfilteredtopic("MyFilteredTopic", clampStatusTopic, "unique_device_identifier = %0", params);
 
-  ice::ClampStatusDataReader *reader = dynamic_cast<ice::ClampStatusDataReader*>(participant->create_datareader(filteredClampStatusTopic, DDS_DATAREADER_QOS_DEFAULT, NULL, DDS_STATUS_MASK_NONE));
+  ice::ClampStatusDataReader *reader = dynamic_cast<ice::ClampStatusDataReader*>(participant->create_datareader(filteredClampStatusTopic, DDS_DATAREADER_QOS_DEFAULT, 
+  	&clampStatusDataReaderListener, DDS_DATA_AVAILABLE_STATUS));
   ice::InfusionObjectiveDataWriter *writer = dynamic_cast<ice::InfusionObjectiveDataWriter*>(participant->create_datawriter(infusionObjectiveTopic, DDS_DATAWRITER_QOS_DEFAULT, NULL, DDS_STATUS_MASK_NONE));
 
 
@@ -220,20 +265,8 @@ void controller() {
 
   DDS_InstanceHandle_t handle = writer->register_instance(infusionObjective);
 
-  ice::ClampStatusSeq clampStatusSeq;
-  DDS_SampleInfoSeq sampleInfoSeq;
-
-
   for(;;) {
   	writer->write(infusionObjective, handle);
-
- 	if(DDS_RETCODE_OK == reader->read(clampStatusSeq, sampleInfoSeq, DDS_LENGTH_UNLIMITED, DDS_NOT_READ_SAMPLE_STATE, DDS_ANY_VIEW_STATE, DDS_ALIVE_INSTANCE_STATE)) {
- 		for(int i = 0; i < clampStatusSeq.length(); ++i) {
- 			ice::ClampStatusTypeSupport::print_data(&clampStatusSeq[i]);
- 		}
- 		reader->return_loan(clampStatusSeq, sampleInfoSeq);
- 	}
-
 
   	sleep(1);
   }  
